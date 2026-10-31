@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Chrome Presence – Settings</title>
+    <link rel="icon" href="../../icons/icon32.png">
+    <link rel="stylesheet" href="../ui/theme.css">
+    <link rel="stylesheet" href="options.css">
+  </head>
+  <body class="options-page">
+    <header class="topbar">
+      <a class="brand" href="#top" aria-label="Chrome Presence – back to top">
+        <img src="../../icons/icon48.png" alt="" width="36" height="36">
+        <span>
+          <strong>Chrome Presence</strong>
+          <small>Discord Rich Presence for your browser</small>
+        </span>
+      </a>
+      <div class="topbar-actions">
+        <span id="save-state" class="save-state" role="status" aria-live="polite"></span>
+        <a class="btn btn-quiet" href="https://discord.com/developers/applications" target="_blank" rel="noreferrer">
+          Discord Portal ↗
+        </a>
+      </div>
+    </header>
+
+    <div class="shell" id="top">
+      <aside class="sidebar">
+        <section class="status-card" aria-labelledby="status-heading">
+          <div class="status-head">
+            <span id="status-dot" class="status-dot" data-tone="neutral" aria-hidden="true"></span>
+            <div>
+              <p class="eyebrow">Status</p>
+              <h2 id="status-heading">Connecting…</h2>
+            </div>
+          </div>
+          <p id="status-detail" class="status-detail">Just a moment while I check the connection.</p>
+
+          <div class="status-toggle">
+            <div>
+              <p class="mini-label">Share presence</p>
+              <p id="toggle-hint" class="mini-hint">On</p>
+            </div>
+            <label class="switch">
+              <input id="enabled-toggle" type="checkbox" role="switch" aria-label="Share presence">
+              <span class="switch-track" aria-hidden="true"></span>
+            </label>
+          </div>
+
+          <div id="presence-preview" class="presence-preview is-empty" aria-label="Discord activity preview">
+            <div class="presence-art">
+              <img src="../../icons/icon128.png" alt="">
+            </div>
+            <div class="presence-body">
+              <p class="presence-app">Chrome <span class="preview-tag">Preview</span></p>
+              <p id="preview-details" class="presence-details">No activity</p>
+              <p id="preview-state" class="presence-state" hidden></p>
+              <p id="preview-time" class="presence-time" hidden></p>
+            </div>
+          </div>
+
+          <p id="current-page" class="current-page"></p>
+
+          <button id="reconnect" class="btn btn-secondary btn-block" type="button">
+            Restart connection
+          </button>
+        </section>
+
+        <nav class="side-nav" aria-label="Settings sections">
+          <a href="#setup">Setup</a>
+          <a href="#display">Display</a>
+          <a href="#behavior">Behavior</a>
+          <a href="#privacy">Privacy</a>
+          <a href="#about">About</a>
+        </nav>
+
+        <p class="sidebar-foot">
+          Everything runs locally through Chrome and Discord. There is no developer server.
+        </p>
+      </aside>
+
+      <main class="content">
+        <details id="setup" class="section">
+          <summary class="section-head">
+            <p class="eyebrow">01</p>
+            <h2>Setup</h2>
+            <p>Three components: your own Discord app, the local host, and the app ID here in settings.</p>
+          </summary>
+
+          <div class="card">
+            <ol class="steps">
+              <li id="step-app" class="step">
+                <div class="step-marker" aria-hidden="true">1</div>
+                <div class="step-body">
+                  <div class="step-title">
+                    <h3>Create a Discord app</h3>
+                    <span id="step-app-badge" class="badge" data-tone="warn">Open</span>
+                  </div>
+                  <p>
+                    Create a new application in the
+                    <a href="https://discord.com/developers/applications" target="_blank" rel="noreferrer">Discord Developer Portal</a>.
+                    Its name will appear in your profile – for example,
+                    <em>“Playing Chrome”</em> if you name the app <em>Chrome</em>.
+                  </p>
+                  <details>
+                    <summary>Step-by-step guide</summary>
+                    <ol class="mini-steps">
+                      <li>Click <strong>New Application</strong> and choose a name.</li>
+                      <li>Under <strong>General Information</strong>, copy the <strong>Application ID</strong>.</li>
+                      <li>Optional: Under <strong>Rich Presence → Art Assets</strong>, upload <code>assets/discord-asset.png</code> as <code>chrome</code>.</li>
+                      <li>Paste the ID into the <strong>Application ID</strong> field below.</li>
+                    </ol>
+                  </details>
+                </div>
+              </li>
+
+              <li id="step-host" class="step">
+                <div class="step-marker" aria-hidden="true">2</div>
+                <div class="step-body">
+                  <div class="step-title">
+                    <h3>Install the local host</h3>
+                    <span id="step-host-badge" class="badge" data-tone="warn">Open</span>
+                  </div>
+                  <p>
+                    The host is the bridge between Chrome and Discord. It runs only on your computer
+                    and talks directly to the local Discord client.
+                  </p>
+                  <div class="code-row">
+                    <code class="code-block">./host/install.sh</code>
+                    <button type="button" class="copy-btn" data-copy="./host/install.sh">Copy</button>
+                  </div>
+                  <p class="mini-hint">
+                    Linux or macOS, Node.js 18+. Then reload the extension at
+                    <code>chrome://extensions</code>. The script adds the extension ID
+                    automatically.
+                  </p>
+                  <dl class="meta-list">
+                    <div>
+                      <dt>Extension ID</dt>
+                      <dd>
+                        <code id="extension-id">…</code>
+                        <button type="button" class="copy-btn" data-copy-target="extension-id">Copy</button>
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Host name</dt>
+                      <dd><code id="host-name">app.chromepresence.host</code></dd>
+                    </div>
+                  </dl>
+                  <details>
+                    <summary>Show manual installation</summary>
+                    <p>
+                      Save the following file as
+                      <code>NativeMessagingHosts/app.chromepresence.host.json</code> in your
+                      browser's configuration folder and adjust the path.
+                    </p>
+                    <pre id="manual-manifest" class="code-block">…</pre>
+                    <p>
+                      The executable <code>host/run-host.sh</code> is generated by the installer.
+                      It must be executable.
+                    </p>
+                  </details>
+                </div>
+              </li>
+
+              <li id="step-discord" class="step">
+                <div class="step-marker" aria-hidden="true">3</div>
+                <div class="step-body">
+                  <div class="step-title">
+                    <h3>Enable sharing in Discord</h3>
+                    <span id="step-discord-badge" class="badge" data-tone="warn">Open</span>
+                  </div>
+                  <p>
+                    The Discord desktop app must be running. Also check under
+                    <em>Settings → Activity Privacy</em> that Discord is allowed to share activities.
+                    Discord in the browser does not support local Rich Presence.
+                  </p>
+                  <p class="mini-hint">
+                    Your activity will be visible to friends as long as your Discord status is not
+                    set to “Invisible”.
+                  </p>
+                </div>
+              </li>
+            </ol>
+
+            <div id="setup-callout" class="callout" data-tone="ok" hidden>
+              <strong id="setup-callout-title">All set.</strong>
+              <span id="setup-callout-text">Your browser activity is now being sent to Discord locally.</span>
+            </div>
+          </div>
+        </details>
+
+        <details id="display" class="section">
+          <summary class="section-head">
+            <p class="eyebrow">02</p>
+            <h2>Display</h2>
+            <p>Choose what appears in your Discord profile and how much detail is visible.</p>
+          </summary>
+
+          <div class="card">
+            <div class="field-grid">
+              <div class="field full">
+                <label class="field-label" for="app-id">Discord Application ID</label>
+                <input id="app-id" class="input" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" placeholder="e.g. 123456789012345678" aria-describedby="app-id-hint app-id-error">
+                <p id="app-id-hint" class="field-hint">
+                  16–22 digits from the Discord Developer Portal.
+                  <a href="https://discord.com/developers/applications" target="_blank" rel="noreferrer">Open portal ↗</a>
+                </p>
+                <p id="app-id-error" class="field-error" role="alert" hidden>The Application ID must contain 16–22 digits.</p>
+              </div>
+
+              <div class="field">
+                <label class="field-label" for="activity-type">Activity type</label>
+                <select id="activity-type" class="select">
+                  <option value="0">Playing</option>
+                  <option value="2">Listening</option>
+                  <option value="3">Watching</option>
+                  <option value="5">Competing</option>
+                </select>
+                <p class="field-hint">Depending on your Discord client, “Listening” may be displayed differently.</p>
+              </div>
+
+              <div class="field">
+                <label class="field-label" for="details-source">First line</label>
+                <select id="details-source" class="select">
+                  <option value="title">Tab title</option>
+                  <option value="domain">Domain only</option>
+                </select>
+                <p class="field-hint">The tab title also shows video titles. “Domain only” is more discreet.</p>
+              </div>
+
+              <div class="field">
+                <label class="field-label" for="state-source">Second line</label>
+                <select id="state-source" class="select">
+                  <option value="domain">Domain only</option>
+                  <option value="path">Domain + path</option>
+                  <option value="url">Full URL</option>
+                </select>
+                <p class="field-hint">Full URLs can contain search terms or tokens.</p>
+              </div>
+
+              <div class="field">
+                <label class="field-label" for="large-image-key">Large image – asset key</label>
+                <input id="large-image-key" class="input" type="text" autocomplete="off" spellcheck="false" placeholder="e.g. chrome">
+                <p class="field-hint">Leave empty if you haven't uploaded an asset.</p>
+              </div>
+
+              <div class="field">
+                <label class="field-label" for="large-text">Large image – tooltip</label>
+                <input id="large-text" class="input" type="text" autocomplete="off" placeholder="Google Chrome">
+              </div>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="toggle-list">
+              <label class="toggle-row">
+                <span>
+                  <strong>Show elapsed time</strong>
+                  <small>Displays “for …” below the activity. The timer starts when you switch to a page.</small>
+                </span>
+                <span class="switch">
+                  <input id="show-timestamp" type="checkbox" role="switch" aria-label="Show elapsed time">
+                  <span class="switch-track" aria-hidden="true"></span>
+                </span>
+              </label>
+
+              <label class="toggle-row">
+                <span>
+                  <strong>Use website icon</strong>
+                  <small>
+                    Uses the icon shown in the site's tab. Discord loads it through Google, which
+                    sends the visited domain to Google. Turn this off if you prefer not to share it.
+                  </small>
+                </span>
+                <span class="switch">
+                  <input id="show-site-icon" type="checkbox" role="switch" aria-label="Use website icon">
+                  <span class="switch-track" aria-hidden="true"></span>
+                </span>
+              </label>
+            </div>
+
+            <div id="icon-template-field" class="field" hidden>
+              <label class="field-label" for="icon-template">Favicon URL template</label>
+              <input id="icon-template" class="input" type="url" autocomplete="off" spellcheck="false">
+              <p class="field-hint">
+                Must contain <code>{domain}</code> and be reachable via HTTPS. Discord fetches the
+                image itself.
+              </p>
+            </div>
+
+            <details class="advanced">
+              <summary>Small image and additional Rich Presence assets</summary>
+              <p>
+                Upload additional images in the Developer Portal under <em>Rich Presence → Art Assets</em>.
+                Leave the fields empty if you don't upload any. The included
+                <code>assets/discord-asset.png</code> works well as a large image.
+              </p>
+              <div class="field-grid">
+                <div class="field">
+                  <label class="field-label" for="small-image-key">Small image – asset key</label>
+                  <input id="small-image-key" class="input" type="text" autocomplete="off" spellcheck="false" placeholder="optional">
+                </div>
+                <div class="field">
+                  <label class="field-label" for="small-text">Small image – tooltip</label>
+                  <input id="small-text" class="input" type="text" autocomplete="off" placeholder="optional">
+                </div>
+              </div>
+            </details>
+          </div>
+        </details>
+
+        <details id="behavior" class="section">
+          <summary class="section-head">
+            <p class="eyebrow">03</p>
+            <h2>Behavior</h2>
+            <p>When presence is visible – and when Chrome stays quiet.</p>
+          </summary>
+
+          <div class="card">
+            <div class="toggle-list">
+              <label class="toggle-row">
+                <span>
+                  <strong>Only when Chrome is focused</strong>
+                  <small>Hides the activity when you switch to another app.</small>
+                </span>
+                <span class="switch">
+                  <input id="only-when-focused" type="checkbox" role="switch" aria-label="Show only when Chrome is focused">
+                  <span class="switch-track" aria-hidden="true"></span>
+                </span>
+              </label>
+
+              <label class="toggle-row">
+                <span>
+                  <strong>Don't share incognito tabs</strong>
+                  <small>Recommended. Incognito windows never appear in Discord.</small>
+                </span>
+                <span class="switch">
+                  <input id="hide-incognito" type="checkbox" role="switch" aria-label="Don't share incognito tabs">
+                  <span class="switch-track" aria-hidden="true"></span>
+                </span>
+              </label>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="field-grid">
+              <div class="field">
+                <label class="field-label" for="idle-timeout">Idle detection</label>
+                <div class="input-unit">
+                  <input id="idle-timeout" class="input" type="number" min="0" max="1440" step="1">
+                  <span>minutes</span>
+                </div>
+                <p class="field-hint">After this time without input, presence is hidden. 0 disables detection.</p>
+              </div>
+            </div>
+          </div>
+        </details>
+
+        <details id="privacy" class="section">
+          <summary class="section-head">
+            <p class="eyebrow">04</p>
+            <h2>Privacy</h2>
+            <p>You decide which sites never appear in Discord.</p>
+          </summary>
+
+          <div class="card">
+            <div class="privacy-columns">
+              <div class="field">
+                <label class="field-label" for="excluded-domains">Excluded domains</label>
+                <textarea id="excluded-domains" class="textarea" rows="7" spellcheck="false" placeholder="example.com&#10;bank.com&#10;*.internal.example"></textarea>
+                <p class="field-hint">
+                  One domain per line. Subdomains are included automatically. No presence is shown
+                  for these sites.
+                </p>
+              </div>
+              <ul class="privacy-list">
+                <li><strong>Local:</strong> The extension reads the active tab. The host only receives the finished activity.</li>
+                <li><strong>To Discord:</strong> only the visible lines and – if enabled – elapsed time and images.</li>
+                <li><strong>No developer server:</strong> no telemetry, analytics, or accounts.</li>
+                <li><strong>Not stored:</strong> The host keeps only the latest activity in memory.</li>
+                <li><strong>Settings:</strong> stored in Chrome Sync if you use Chrome Sync.</li>
+                <li><strong>Website icons:</strong> Enabled by default and loaded through Google; turn them off to keep domains from Google.</li>
+              </ul>
+            </div>
+
+            <div class="divider"></div>
+
+            <div class="callout">
+              <span>
+                <strong>Permissions:</strong> <code>tabs</code> for title and URL, <code>storage</code>
+                for settings, <code>idle</code> for idle detection,
+                <code>nativeMessaging</code> for the local host, and <code>alarms</code> as a
+                keep-alive. There are no content scripts and no access to page content.
+              </span>
+            </div>
+          </div>
+        </details>
+
+        <details id="about" class="section">
+          <summary class="section-head">
+            <p class="eyebrow">05</p>
+            <h2>About</h2>
+            <p>What happens under the hood – and where the limits are.</p>
+          </summary>
+
+          <div class="card">
+            <div class="about-grid">
+              <div class="about-box">
+                <h3>How it works</h3>
+                <p>
+                  Chrome reports the active tab to the extension. It builds a Discord activity from it
+                  and sends it via Native Messaging to the local Node host. The host connects directly
+                  to the desktop app through the Discord IPC socket. Nothing goes through the internet.
+                </p>
+              </div>
+              <div class="about-box">
+                <h3>Limitations</h3>
+                <p>
+                  Requires the Discord desktop app (not the web version) and Node.js for the host.
+                  Flatpak or Snap sandboxes may block the IPC socket. On Windows, the host has to be
+                  packaged as an executable.
+                </p>
+              </div>
+              <div class="about-box">
+                <h3>App name in Discord</h3>
+                <p>
+                  Discord shows the name of the developer application, not the extension. Name your
+                  app <em>Chrome</em>, for example, so Discord displays “Playing Chrome”.
+                </p>
+              </div>
+              <div class="about-box">
+                <h3>Uninstall</h3>
+                <p>
+                  Remove the extension, then run <code>./host/install.sh --uninstall</code>. This
+                  removes the native host manifests from the detected browser folders.
+                </p>
+              </div>
+            </div>
+
+            <div class="version-line">
+              <span>Version <span id="version">1.0.0</span></span>
+              <span>Host: <code id="about-host">app.chromepresence.host</code></span>
+              <span>Not affiliated with Google or Discord.</span>
+            </div>
+          </div>
+        </details>
+      </main>
+    </div>
+
+    <footer class="page-footer">
+      <p>
+        Chrome Presence is a local hobby project. Chrome and Discord are trademarks of their
+        respective owners. No data is sent to the developer.
+      </p>
+    </footer>
+
+    <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+
+    <script type="module" src="options.js"></script>
+  </body>
+</html>

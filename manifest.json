@@ -1,0 +1,40 @@
+{
+  "manifest_version": 3,
+  "name": "Chrome Presence",
+  "version": "1.0.0",
+  "description": "Show your current Chrome activity as Discord Rich Presence – locally, without a server.",
+  "minimum_chrome_version": "116",
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAt2Rs7c+6D1kL+2CMP2jRSGsZ0632iPj4zmVAr8vGq7BNAEkbDtXraBBSNmdDDOBGug+NYh/XUwSDDr8k6r30F0lCW/nqYT4EtDd86FexEu09bQMIP7Biv2UdxNfNKdauc9cg4mbuMxd97zU0O3V0yyIBddKmim4k9k/t2LDO5Aic/YTU3ACqFJOy7yB4RKydRrXScNBxk1oNplrfGNl4kVyYWVdxdk7nng/z5i2lUElG33Ypn18LVfsJZJA6zY7w3L3grBGJr91at+BMB5qABXQTgA8w6oS1RlbB8n6lPnSJMA76jUNVyGzQQvMm6DiZbcj/6VoiKiISjMmb4cOU3wIDAQAB",
+  "permissions": [
+    "tabs",
+    "storage",
+    "idle",
+    "nativeMessaging",
+    "alarms"
+  ],
+  "background": {
+    "service_worker": "src/background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_title": "Chrome Presence",
+    "default_popup": "src/popup/popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "options_ui": {
+    "page": "src/options/options.html",
+    "open_in_tab": true
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "incognito": "spanning"
+}

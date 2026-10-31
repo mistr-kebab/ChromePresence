@@ -1,0 +1,26 @@
+{
+  "name": "chrome-presence",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Chrome activity as Discord Rich Presence, via a local native messaging host.",
+  "license": "MIT",
+  "author": "Antonio <antonio@disc-tools.de>",
+  "homepage": "https://github.com/mistr-kebab/ChromePresence#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mistr-kebab/ChromePresence.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mistr-kebab/ChromePresence/issues"
+  },
+  "scripts": {
+    "test": "node --test tests/*.test.mjs",
+    "icons": "python3 tools/make_icons.py",
+    "install-host": "./host/install.sh",
+    "doctor": "node host/doctor.mjs"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
