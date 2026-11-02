@@ -93,9 +93,11 @@ export function standardTargets({
     ];
   }
 
+  // Always build POSIX paths here, even when the tests simulate Linux or
+  // macOS from a Windows host.
   return entries.map(([name, relative, kind]) => ({
     name,
-    base: path.join(home, relative),
+    base: path.posix.join(home, relative),
     kind: kind || 'native',
   }));
 }
