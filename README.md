@@ -18,7 +18,7 @@ is **no developer server**, no telemetry, and no Discord bot login.
   (e.g. Chromium, Brave, Edge, Vivaldi)
 - [Node.js](https://nodejs.org/) 18 or newer
 - The **Discord desktop app** (the web version does not support local RPC)
-- Linux or macOS for the included installer
+- Windows 10/11, Linux, or macOS
 - Your own Discord application (free; only the Application ID is needed)
 
 The project has no npm dependencies. `npm install` is not required.
@@ -41,27 +41,55 @@ The project has no npm dependencies. `npm install` is not required.
 
 From the project folder:
 
+**Linux / macOS**
+
 ```bash
 ./host/install.sh
 ```
 
-The script detects existing browser configuration folders and writes
-`app.chromepresence.host.json` into each browser's `NativeMessagingHosts`
-folder. It also generates the `host/run-host.sh` wrapper containing the
-absolute path to the current Node.js executable.
+**Windows** (Command Prompt or PowerShell)
+
+```bat
+.\host\install.cmd
+```
+
+On Linux and macOS the installer detects existing browser configuration folders
+and writes `app.chromepresence.host.json` into each browser's
+`NativeMessagingHosts` folder. It also generates the `host/run-host.sh` wrapper
+containing the absolute path to the current Node.js executable.
+
+On Windows the installer writes
+`%LOCALAPPDATA%\ChromePresence\app.chromepresence.host.json` and registers that
+manifest in the current user's registry for Chrome, Chromium, Brave, Edge,
+Vivaldi, Opera, Opera GX, and Arc. It also generates `host\run-host.cmd`, which
+launches Node.js. Administrator rights are not required.
+
+You can also use npm on any platform:
+
+```bash
+npm run install-host -- --dry-run
+npm run install-host -- --help
+```
 
 Useful variants:
 
 ```bash
+# Linux / macOS
 ./host/install.sh --dry-run       # show what would happen, write nothing
 ./host/install.sh --all           # include known browser folders that don't exist yet
 ./host/install.sh --target="$HOME/.config/google-chrome"
-./host/install.sh --help
+
+# Windows
+.\host\install.cmd --dry-run
+.\host\install.cmd --target=HKCU\Software\Google\Chrome\NativeMessagingHosts
 ```
 
-`--target` can be repeated and limits the installation to the given folders.
-This is also useful for isolated test profiles. The path can be either the
-browser configuration folder or a `NativeMessagingHosts` folder itself.
+`--target` can be repeated and limits the installation to the given target.
+On Linux and macOS it is a browser configuration folder (or a
+`NativeMessagingHosts` folder itself); this is also useful for isolated test
+profiles. On Windows it is a registry key. `HKCU` is assumed when the hive is
+omitted, and the host name is appended when the key ends with
+`NativeMessagingHosts`.
 
 After installing:
 
@@ -171,8 +199,8 @@ host/host.cjs  ──  local Discord IPC socket  ──▶  Discord desktop app
   automatically.
 
 The host supports the usual Discord socket paths on Linux and macOS, including
-Flatpak and Snap paths. On Windows it looks for Discord's named pipes, but the
-installation is not automated there (see below).
+Flatpak and Snap paths. On Windows it connects to Discord's
+`discord-ipc-0` to `discord-ipc-9` named pipes.
 
 ## Permissions
 
@@ -227,12 +255,21 @@ the repository.
 
 1. Run `npm run doctor` and read its output.
 2. Make sure the installer ran for **the browser you use**:
-   `./host/install.sh --target=<browser-profile-folder>`.
+   - Linux/macOS: `./host/install.sh --target=<browser-profile-folder>`
+   - Windows: `.\host\install.cmd --target=<registry-key>`
 3. Reload the extension at `chrome://extensions`; if necessary, quit and
    restart Chrome.
-4. Check that `host/run-host.sh` is executable and that the Node path stored
-   inside it exists.
-5. Chrome installed through Snap or Flatpak may block the local host. A native
+4. Check the generated wrapper and the Node path stored inside it:
+   - Linux/macOS: `host/run-host.sh`
+   - Windows: `host\run-host.cmd`
+5. On Windows, verify the registry entry and that the manifest file it points
+   to exists:
+
+   ```bat
+   reg query "HKCU\Software\Google\Chrome\NativeMessagingHosts\app.chromepresence.host" /ve
+   ```
+
+6. Chrome installed through Snap or Flatpak may block the local host. A native
    Chrome installation is the most reliable option.
 
 ### “Discord unreachable”
@@ -240,6 +277,8 @@ the repository.
 - Start the Discord desktop app, not just Discord in a browser.
 - Quit Discord completely and start it again.
 - Check whether the socket exists:
+  - Windows: the `\\?\pipe\discord-ipc-0` named pipe (the host also tries
+    `discord-ipc-1` to `discord-ipc-9`)
   - normal: `$XDG_RUNTIME_DIR/discord-ipc-0` or `/tmp/discord-ipc-0`
   - Flatpak: `$XDG_RUNTIME_DIR/app/com.discordapp.Discord/discord-ipc-0`
 - With Discord in a Flatpak sandbox, the socket must be reachable by the host.
@@ -278,20 +317,25 @@ the extension settings and by `npm run doctor`.
 ## Uninstall
 
 1. Remove the extension at `chrome://extensions`.
-2. Remove the host manifests:
+2. Remove the host manifests or registry entries:
 
    ```bash
+   # Linux / macOS
    ./host/install.sh --uninstall
+
+   # Windows
+   .\host\install.cmd --uninstall
    ```
 
    If you installed with `--target`, pass the same target again:
 
    ```bash
    ./host/install.sh --uninstall --target="$HOME/.config/google-chrome"
+   .\host\install.cmd --uninstall --target=HKCU\Software\Google\Chrome\NativeMessagingHosts
    ```
 
-3. Optionally delete the project folder. This also removes the
-   `host/run-host.sh` wrapper.
+3. Optionally delete the project folder. This also removes the generated
+   `host/run-host.sh` or `host/run-host.cmd` wrapper.
 
 ## Platform notes
 
@@ -299,11 +343,12 @@ the extension settings and by `npm run doctor`.
   Opera, and common Flatpak/Snap paths.
 - **macOS:** The usual folders under `~/Library/Application Support` are
   detected.
-- **Windows:** The host code supports Discord's named pipes, but there is no
-  automated installer. For Chrome on Windows, the host would need to be
-  packaged as an executable (for example with a Node.js-to-EXE packager) and
-  the native messaging manifest registered in the registry. This is
-  intentionally not automated in this project.
+- **Windows:** The installer registers the native messaging manifest in each
+  browser's `HKCU\...\NativeMessagingHosts\app.chromepresence.host` key for
+  Chrome, Chromium, Brave, Edge, Vivaldi, Opera, Opera GX, and Arc. It uses a
+  `host\run-host.cmd` wrapper because Chrome starts non-executable hosts through
+  `cmd.exe`; `cmd.exe` must be available. `npm run doctor` lists every registry
+  entry it finds.
 - **Flatpak/Snap:** Native messaging and access to the Discord socket may be
   restricted by the sandbox. `npm run doctor` shows whether the manifest and
   socket are found.
@@ -322,11 +367,16 @@ host/
   host.cjs                 Native messaging bridge
   lib/discord-rpc.cjs      Discord IPC client, socket discovery, reconnect
   lib/native-messaging.cjs Length-prefixed native messages
-  lib/targets.mjs          Browser paths and extension ID
+  lib/registry.mjs         Windows registry helper
+  lib/targets.mjs          Browser paths, registry keys, extension ID
+  lib/wrapper.mjs          Wrapper generation for .sh and .cmd
   install.mjs              Installer/uninstaller
-  install.sh               Installer launcher
+  install.sh               Launcher for Linux and macOS
+  install.cmd              Launcher for Windows
   doctor.mjs               Diagnostics
-  run-host.sh              Wrapper generated by the installer
+  doctor.cmd               Diagnostics launcher for Windows
+  run-host.sh              Wrapper generated on Linux and macOS
+  run-host.cmd             Wrapper generated on Windows
 tests/                     Node test runner, including a fake Discord
 assets/                    Discord asset for optional upload
 icons/                     Extension icons

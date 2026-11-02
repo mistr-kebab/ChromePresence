@@ -156,7 +156,8 @@ To delete data:
 
 1. Remove the extension at `chrome://extensions`. This clears the extension's
    storage areas.
-2. Remove the host manifests with `./host/install.sh --uninstall`.
+2. Remove the host manifests with `./host/install.sh --uninstall` on Linux or
+   macOS, or `.\host\install.cmd --uninstall` on Windows.
 3. Optionally delete the project folder.
 4. If Chrome Sync is enabled, it may take a moment for the settings to be
    removed from the synced copy. You can also manage sync data in your Google

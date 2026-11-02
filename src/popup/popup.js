@@ -35,7 +35,7 @@ const REASON_LABELS = {
 };
 
 const HOST_NOT_FOUND =
-  'The host is not installed. Run “./host/install.sh” and reload the extension.';
+  'The host is not installed. Run “./host/install.sh” (Linux/macOS) or “.\\host\\install.cmd” (Windows), then reload the extension.';
 
 let lastStatus = null;
 let pollTimer = null;

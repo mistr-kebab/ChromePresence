@@ -17,7 +17,7 @@
   "scripts": {
     "test": "node --test tests/*.test.mjs",
     "icons": "python3 tools/make_icons.py",
-    "install-host": "./host/install.sh",
+    "install-host": "node host/install.mjs",
     "doctor": "node host/doctor.mjs"
   },
   "engines": {

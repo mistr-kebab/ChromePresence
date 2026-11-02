@@ -113,22 +113,42 @@ function closeServer(server) {
   return new Promise((resolve) => server.close(() => resolve()));
 }
 
+let pipeCounter = 0;
+
 function tempSocket() {
+  if (process.platform === 'win32') {
+    pipeCounter += 1;
+    return {
+      directory: null,
+      socketPath: `\\\\.\\pipe\\chrome-presence-${process.pid}-${Date.now()}-${pipeCounter}`,
+    };
+  }
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'chrome-presence-'));
   return { directory, socketPath: path.join(directory, 'discord-ipc-0') };
 }
 
-function setSocketDir(directory) {
-  process.env.DISCORD_IPC_DIR = directory;
+function setSocket(directory, socketPath) {
+  if (process.platform === 'win32') {
+    process.env.DISCORD_IPC_PATH = socketPath;
+    delete process.env.DISCORD_IPC_DIR;
+  } else {
+    process.env.DISCORD_IPC_DIR = directory;
+    delete process.env.DISCORD_IPC_PATH;
+  }
 }
 
-function clearSocketDir() {
+function clearSocket() {
   delete process.env.DISCORD_IPC_DIR;
+  delete process.env.DISCORD_IPC_PATH;
+}
+
+function removeSocketDir(directory) {
+  if (directory) fs.rmSync(directory, { recursive: true, force: true });
 }
 
 test('DiscordRPC handshakes, sends and clears activity', async (t) => {
   const { directory, socketPath } = tempSocket();
-  setSocketDir(directory);
+  setSocket(directory, socketPath);
   const frames = [];
   const server = await startFakeDiscord(socketPath, frames);
   const statuses = [];
@@ -137,8 +157,8 @@ test('DiscordRPC handshakes, sends and clears activity', async (t) => {
   t.after(async () => {
     if (rpc) rpc.stop();
     await closeServer(server);
-    clearSocketDir();
-    fs.rmSync(directory, { recursive: true, force: true });
+    clearSocket();
+    removeSocketDir(directory);
   });
 
   rpc = new DiscordRPC({
@@ -188,7 +208,7 @@ test('DiscordRPC handshakes, sends and clears activity', async (t) => {
 
 test('DiscordRPC connects when Discord appears later', async (t) => {
   const { directory, socketPath } = tempSocket();
-  setSocketDir(directory);
+  setSocket(directory, socketPath);
   const frames = [];
   const statuses = [];
   let rpc;
@@ -197,8 +217,8 @@ test('DiscordRPC connects when Discord appears later', async (t) => {
   t.after(async () => {
     if (rpc) rpc.stop();
     if (server) await closeServer(server);
-    clearSocketDir();
-    fs.rmSync(directory, { recursive: true, force: true });
+    clearSocket();
+    removeSocketDir(directory);
   });
 
   rpc = new DiscordRPC({
@@ -223,7 +243,7 @@ test('DiscordRPC connects when Discord appears later', async (t) => {
 
 test('native host bridges native messages to Discord IPC', async (t) => {
   const { directory, socketPath } = tempSocket();
-  setSocketDir(directory);
+  setSocket(directory, socketPath);
   const frames = [];
   const server = await startFakeDiscord(socketPath, frames);
   const nativeMessages = [];
@@ -232,7 +252,6 @@ test('native host bridges native messages to Discord IPC', async (t) => {
   const child = spawn(process.execPath, [HOST_SCRIPT], {
     env: {
       ...process.env,
-      DISCORD_IPC_DIR: directory,
       CHROME_PRESENCE_MIN_INTERVAL_MS: '50',
       CHROME_PRESENCE_RETRY_MS: '100',
     },
@@ -242,8 +261,8 @@ test('native host bridges native messages to Discord IPC', async (t) => {
   t.after(async () => {
     if (child.exitCode === null) child.kill('SIGTERM');
     await closeServer(server);
-    clearSocketDir();
-    fs.rmSync(directory, { recursive: true, force: true });
+    clearSocket();
+    removeSocketDir(directory);
   });
 
   child.stdout.on('data', (chunk) => {

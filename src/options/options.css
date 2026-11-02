@@ -430,6 +430,20 @@
   font-weight: 600;
 }
 
+.command-label {
+  margin-top: 16px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  line-height: 16px;
+  text-transform: uppercase;
+}
+
+.command-label + .code-row {
+  margin-top: 6px;
+}
+
 .code-row {
   display: flex;
   align-items: stretch;

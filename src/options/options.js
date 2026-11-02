@@ -66,8 +66,10 @@ const REASON_LABELS = {
   excluded: 'This domain is excluded',
 };
 
+const IS_WINDOWS = navigator.userAgent.includes('Windows');
+
 const HOST_NOT_FOUND =
-  'The native host is not installed or has not been loaded yet. Run “./host/install.sh” and reload the extension at chrome://extensions.';
+  'The native host is not installed or has not been loaded yet. Run “./host/install.sh” (Linux/macOS) or “.\\host\\install.cmd” (Windows), then reload the extension at chrome://extensions.';
 
 let settings = null;
 let saveTimer = null;
@@ -567,11 +569,14 @@ function buildMeta() {
   el.hostName.textContent = HOST_NAME;
   el.aboutHost.textContent = HOST_NAME;
   el.version.textContent = chrome.runtime.getManifest().version;
+  const wrapper = IS_WINDOWS
+    ? 'C:\\absolute\\path\\to\\ChromePresence\\host\\run-host.cmd'
+    : '/absolute/path/to/ChromePresence/host/run-host.sh';
   el.manualManifest.textContent = JSON.stringify(
     {
       name: HOST_NAME,
       description: 'Chrome Presence – local native messaging host',
-      path: '/absolute/path/to/ChromePresence/host/run-host.sh',
+      path: wrapper,
       type: 'stdio',
       allowed_origins: [`chrome-extension://${id}/`],
     },

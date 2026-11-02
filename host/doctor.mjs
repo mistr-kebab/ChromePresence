@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
+import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
@@ -9,20 +10,24 @@ import {
   HOST_NAME,
   expandHome,
   extensionIdFromManifest,
+  normalizeRegistryKey,
   standardTargets,
   validateExtensionId,
   withManifestPath,
 } from './lib/targets.mjs';
+import { queryRegistryValue } from './lib/registry.mjs';
+import { wrapperFileName } from './lib/wrapper.mjs';
 
 const require = createRequire(import.meta.url);
 const { existingSocketCandidates } = require('./lib/discord-rpc.cjs');
 const { NativeMessageReader } = require('./lib/native-messaging.cjs');
 
+const IS_WINDOWS = process.platform === 'win32';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(HERE, '..');
 const EXTENSION_MANIFEST = path.join(ROOT, 'manifest.json');
 const HOST_SCRIPT = path.join(HERE, 'host.cjs');
-const WRAPPER = path.join(HERE, 'run-host.sh');
+const WRAPPER = path.join(HERE, wrapperFileName());
 
 const options = {
   help: false,
@@ -44,18 +49,22 @@ for (const arg of process.argv.slice(2)) {
 }
 
 if (options.help) {
+  const targetHelp = IS_WINDOWS
+    ? `  --target=KEY         Check an additional registry key (repeatable)`
+    : `  --target=DIR         Check an additional browser configuration folder
+                       (repeatable)`;
+
   console.log(`Chrome Presence – diagnostics
 
 Usage:
   npm run doctor
-  node host/doctor.mjs [--target=DIR] [--extension-id=ID]
+  node host/doctor.mjs [--target=${IS_WINDOWS ? 'KEY' : 'DIR'}] [--extension-id=ID]
 
 Checks Node.js, the extension ID, the host wrapper, installed native
 messaging manifests, and the Discord IPC socket.
 
 Options:
-  --target=DIR         Check an additional browser configuration folder
-                       (repeatable)
+${targetHelp}
   --extension-id=ID    Override the expected extension ID
   --help               Show this help
 `);
@@ -85,6 +94,11 @@ function info(title, detail = '') {
 
 function prettyPath(value) {
   const home = os.homedir();
+  if (IS_WINDOWS) {
+    return value.toLowerCase().startsWith(home.toLowerCase())
+      ? `~${value.slice(home.length)}`
+      : value;
+  }
   return value.startsWith(home) ? `~${value.slice(home.length)}` : value;
 }
 
@@ -114,6 +128,17 @@ function resolveExpectedId() {
 }
 
 function customTargets() {
+  if (IS_WINDOWS) {
+    return options.targets.map((raw) => {
+      const registryKey = normalizeRegistryKey(raw);
+      return {
+        name: `Custom: ${registryKey}`,
+        kind: 'custom',
+        registryKey,
+      };
+    });
+  }
+
   return options.targets.map((raw) => {
     const resolved = path.resolve(expandHome(raw));
     const base = path.basename(resolved) === 'NativeMessagingHosts'
@@ -127,10 +152,17 @@ function hostRuntimeCheck() {
   return new Promise((resolve) => {
     let child;
     try {
-      child = spawn(WRAPPER, [], {
-        stdio: ['pipe', 'pipe', 'pipe'],
-        env: process.env,
-      });
+      child = IS_WINDOWS
+        ? spawn(`"${WRAPPER}"`, [], {
+          stdio: ['pipe', 'pipe', 'pipe'],
+          env: process.env,
+          shell: true,
+          windowsHide: true,
+        })
+        : spawn(WRAPPER, [], {
+          stdio: ['pipe', 'pipe', 'pipe'],
+          env: process.env,
+        });
     } catch (error) {
       resolve({ ok: false, error: error.message });
       return;
@@ -189,7 +221,116 @@ function hostRuntimeCheck() {
   });
 }
 
+function manifestProblems(manifest, expectedId) {
+  const allowed = Array.isArray(manifest.allowed_origins)
+    ? manifest.allowed_origins
+    : [];
+  const expectedOrigin = `chrome-extension://${expectedId}/`;
+  const problems = [];
+
+  if (manifest.name !== HOST_NAME) problems.push(`name is not ${HOST_NAME}`);
+  if (manifest.type !== 'stdio') problems.push('type is not stdio');
+  if (typeof manifest.path !== 'string' || !manifest.path) {
+    problems.push('path is missing');
+  } else {
+    const expected = path.resolve(WRAPPER);
+    const actual = path.resolve(manifest.path);
+    const same = IS_WINDOWS
+      ? actual.toLowerCase() === expected.toLowerCase()
+      : actual === expected;
+    if (!same) problems.push(`path does not point to ${prettyPath(WRAPPER)}`);
+  }
+  if (!allowed.includes(expectedOrigin)) {
+    problems.push(`allowed_origins does not contain ${expectedOrigin}`);
+  }
+
+  return problems;
+}
+
+function inspectWindowsManifests(expectedId) {
+  const targets = [
+    ...standardTargets({ platform: 'win32' }),
+    ...customTargets(),
+  ];
+
+  const seen = new Set();
+  const installed = [];
+  let invalid = 0;
+
+  for (const target of targets) {
+    if (seen.has(target.registryKey)) continue;
+    seen.add(target.registryKey);
+
+    let manifestFile;
+    try {
+      manifestFile = queryRegistryValue(target.registryKey);
+    } catch (error) {
+      invalid += 1;
+      fail(
+        `${target.name}: could not read the registry key`,
+        `${error.message}\n  ${target.registryKey}`,
+      );
+      continue;
+    }
+
+    if (manifestFile === null) continue;
+    if (!manifestFile) {
+      invalid += 1;
+      fail(
+        `${target.name}: registry entry is empty`,
+        target.registryKey,
+      );
+      continue;
+    }
+
+    try {
+      if (!fs.existsSync(manifestFile)) {
+        throw new Error(`Manifest file is missing: ${manifestFile}`);
+      }
+      const manifest = readNativeManifest(manifestFile);
+      const problems = manifestProblems(manifest, expectedId);
+
+      if (problems.length > 0) {
+        invalid += 1;
+        fail(
+          `${target.name}: host manifest is invalid`,
+          problems.join('; ') + `\n  ${prettyPath(manifestFile)}`,
+        );
+      } else {
+        installed.push(target);
+        pass(
+          `${target.name}: host manifest is valid`,
+          `${target.registryKey}\n  ${prettyPath(manifestFile)}`,
+        );
+      }
+    } catch (error) {
+      invalid += 1;
+      fail(
+        `${target.name}: host manifest is not readable`,
+        `${error.message}\n  ${target.registryKey}`,
+      );
+    }
+  }
+
+  if (installed.length === 0) {
+    if (invalid === 0) {
+      fail(
+        'No native messaging registry entry found',
+        'Run .\\host\\install.cmd (or use --target=KEY for a custom registry key) as your user.',
+      );
+    }
+  } else {
+    const names = installed.map((target) => target.name).join(', ');
+    info(`Installed for: ${names}`);
+  }
+}
+
 function inspectBrowserManifests(expectedId) {
+  if (IS_WINDOWS) {
+    inspectWindowsManifests(expectedId);
+    return;
+  }
+
   const targets = [
     ...standardTargets().map((target) => ({
       ...withManifestPath(target),
@@ -217,21 +358,7 @@ function inspectBrowserManifests(expectedId) {
 
     try {
       const manifest = readNativeManifest(target.manifest);
-      const allowed = Array.isArray(manifest.allowed_origins)
-        ? manifest.allowed_origins
-        : [];
-      const expectedOrigin = `chrome-extension://${expectedId}/`;
-      const problems = [];
-      if (manifest.name !== HOST_NAME) problems.push(`name is not ${HOST_NAME}`);
-      if (manifest.type !== 'stdio') problems.push('type is not stdio');
-      if (typeof manifest.path !== 'string' || !manifest.path) {
-        problems.push('path is missing');
-      } else if (path.resolve(manifest.path) !== path.resolve(WRAPPER)) {
-        problems.push(`path does not point to ${prettyPath(WRAPPER)}`);
-      }
-      if (!allowed.includes(expectedOrigin)) {
-        problems.push(`allowed_origins does not contain ${expectedOrigin}`);
-      }
+      const problems = manifestProblems(manifest, expectedId);
 
       if (problems.length > 0) {
         invalid += 1;
@@ -287,7 +414,46 @@ function inspectBrowserManifests(expectedId) {
   }
 }
 
-function inspectDiscord() {
+function probePipe(pipe, timeoutMs = 400) {
+  return new Promise((resolve) => {
+    const socket = net.createConnection({ path: pipe });
+    let settled = false;
+
+    const finish = (ok) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      socket.destroy();
+      resolve(ok);
+    };
+
+    const timer = setTimeout(() => finish(false), timeoutMs);
+    socket.once('connect', () => finish(true));
+    socket.once('error', () => finish(false));
+  });
+}
+
+async function findWindowsDiscordPipe() {
+  for (const pipe of existingSocketCandidates()) {
+    if (await probePipe(pipe)) return pipe;
+  }
+  return null;
+}
+
+async function inspectDiscord() {
+  if (IS_WINDOWS) {
+    const pipe = await findWindowsDiscordPipe();
+    if (pipe) {
+      pass('Discord IPC pipe found', pipe);
+    } else {
+      warn(
+        'No Discord IPC pipe found',
+        'Start the Discord desktop app. The host looks for the discord-ipc-0 to discord-ipc-9 named pipes.',
+      );
+    }
+    return;
+  }
+
   let sockets = [];
   try {
     sockets = existingSocketCandidates();
@@ -343,6 +509,8 @@ async function main() {
     HOST_SCRIPT,
     path.join(HERE, 'lib', 'discord-rpc.cjs'),
     path.join(HERE, 'lib', 'native-messaging.cjs'),
+    path.join(HERE, 'lib', 'registry.mjs'),
+    path.join(HERE, 'lib', 'wrapper.mjs'),
     WRAPPER,
   ];
   const missingFiles = requiredFiles.filter((file) => !fs.existsSync(file));
@@ -356,14 +524,18 @@ async function main() {
   }
 
   if (fs.existsSync(WRAPPER)) {
-    try {
-      fs.accessSync(WRAPPER, fs.constants.X_OK);
-      pass('Host wrapper is executable', prettyPath(WRAPPER));
-    } catch {
-      fail(
-        'Host wrapper is not executable',
-        `Run chmod +x ${prettyPath(WRAPPER)} or run the installer again.`,
-      );
+    if (IS_WINDOWS) {
+      pass('Host wrapper present', prettyPath(WRAPPER));
+    } else {
+      try {
+        fs.accessSync(WRAPPER, fs.constants.X_OK);
+        pass('Host wrapper is executable', prettyPath(WRAPPER));
+      } catch {
+        fail(
+          'Host wrapper is not executable',
+          `Run chmod +x ${prettyPath(WRAPPER)} or run the installer again.`,
+        );
+      }
     }
 
     if (missingFiles.length === 0) {
@@ -382,7 +554,7 @@ async function main() {
   }
 
   if (expectedId.id) inspectBrowserManifests(expectedId.id);
-  inspectDiscord();
+  await inspectDiscord();
 
   console.log('');
   console.log(
