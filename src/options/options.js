@@ -91,11 +91,16 @@ function setSaveState(text, tone = '') {
 }
 
 function toast(message) {
+  el.toast.classList.remove('is-leaving');
   el.toast.textContent = message;
   el.toast.hidden = false;
   if (toastTimer) clearTimeout(toastTimer);
   toastTimer = setTimeout(() => {
-    el.toast.hidden = true;
+    el.toast.classList.add('is-leaving');
+    toastTimer = setTimeout(() => {
+      el.toast.hidden = true;
+      el.toast.classList.remove('is-leaving');
+    }, 160);
   }, 2200);
 }
 
@@ -516,48 +521,44 @@ function bindEvents() {
 
 function initSectionNavigation() {
   const links = [...document.querySelectorAll('.side-nav a')];
-  const sections = [...document.querySelectorAll('details.section')];
+  const sections = [...document.querySelectorAll('.section')];
+  const ids = sections.map((section) => section.id);
 
-  const setActive = () => {
-    for (const link of links) {
-      link.classList.toggle('is-active', link.getAttribute('href') === location.hash);
-    }
-  };
-
-  const openTarget = (hash, scroll = false) => {
+  const resolve = (hash) => {
     let id = hash.startsWith('#') ? hash.slice(1) : '';
     try {
       id = decodeURIComponent(id);
     } catch {
-      // Keep the raw fragment when it is not valid percent-encoding.
+      return ids[0];
     }
-    const target = id ? document.getElementById(id) : null;
-    if (!(target instanceof HTMLDetailsElement)) return;
-    target.open = true;
-    if (scroll) target.scrollIntoView({ block: 'start' });
+    return ids.includes(id) ? id : ids[0];
+  };
+
+  const show = (id, scroll = false) => {
+    for (const section of sections) section.hidden = section.id !== id;
+    for (const link of links) {
+      const active = link.getAttribute('href') === `#${id}`;
+      link.classList.toggle('is-active', active);
+      if (active) link.setAttribute('aria-current', 'page');
+      else link.removeAttribute('aria-current');
+    }
+    if (scroll) window.scrollTo({ top: 0 });
   };
 
   for (const link of links) {
-    link.addEventListener('click', () => openTarget(link.hash));
-  }
-
-  for (const section of sections) {
-    section.addEventListener('toggle', () => {
-      if (!section.open) return;
-      if (location.hash !== `#${section.id}`) {
-        history.replaceState(null, '', `#${section.id}`);
-      }
-      setActive();
+    link.addEventListener('click', (event) => {
+      event.preventDefault();
+      const id = resolve(link.hash);
+      if (location.hash !== `#${id}`) history.pushState(null, '', `#${id}`);
+      show(id, true);
     });
   }
 
-  window.addEventListener('hashchange', () => {
-    openTarget(location.hash);
-    setActive();
-  });
+  window.addEventListener('hashchange', () => show(resolve(location.hash), true));
+  window.addEventListener('popstate', () => show(resolve(location.hash), true));
 
-  setActive();
-  if (location.hash) openTarget(location.hash, true);
+  show(resolve(location.hash), true);
+  requestAnimationFrame(() => window.scrollTo({ top: 0 }));
 }
 
 function buildMeta() {

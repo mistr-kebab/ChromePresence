@@ -44,11 +44,16 @@ let toastTimer = null;
 let busy = false;
 
 function toast(message) {
+  el.toast.classList.remove('is-leaving');
   el.toast.textContent = message;
   el.toast.hidden = false;
   if (toastTimer) clearTimeout(toastTimer);
   toastTimer = setTimeout(() => {
-    el.toast.hidden = true;
+    el.toast.classList.add('is-leaving');
+    toastTimer = setTimeout(() => {
+      el.toast.hidden = true;
+      el.toast.classList.remove('is-leaving');
+    }, 160);
   }, 2000);
 }
 

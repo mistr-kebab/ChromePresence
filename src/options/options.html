@@ -20,7 +20,7 @@
       <div class="topbar-actions">
         <span id="save-state" class="save-state" role="status" aria-live="polite"></span>
         <a class="btn btn-quiet" href="https://discord.com/developers/applications" target="_blank" rel="noreferrer">
-          Discord Portal ↗
+          Discord Portal
         </a>
       </div>
     </header>
@@ -68,11 +68,12 @@
         </section>
 
         <nav class="side-nav" aria-label="Settings sections">
-          <a href="#setup">Setup</a>
-          <a href="#display">Display</a>
-          <a href="#behavior">Behavior</a>
-          <a href="#privacy">Privacy</a>
-          <a href="#about">About</a>
+          <p class="nav-label">Settings</p>
+          <a href="#setup"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>Setup</a>
+          <a href="#display"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>Display</a>
+          <a href="#behavior"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 4h-7M10 4H3M21 12h-9M8 12H3M21 20h-5M12 20H3M14 2v4M8 10v4M16 18v4"/></svg>Behavior</a>
+          <a href="#privacy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg>Privacy</a>
+          <a href="#about"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>About</a>
         </nav>
 
         <p class="sidebar-foot">
@@ -81,12 +82,11 @@
       </aside>
 
       <main class="content">
-        <details id="setup" class="section">
-          <summary class="section-head">
-            <p class="eyebrow">01</p>
+        <section id="setup" class="section" hidden>
+          <header class="section-head">
             <h2>Setup</h2>
             <p>Three components: your own Discord app, the local host, and the app ID here in settings.</p>
-          </summary>
+          </header>
 
           <div class="card">
             <ol class="steps">
@@ -189,14 +189,13 @@
               <span id="setup-callout-text">Your browser activity is now being sent to Discord locally.</span>
             </div>
           </div>
-        </details>
+        </section>
 
-        <details id="display" class="section">
-          <summary class="section-head">
-            <p class="eyebrow">02</p>
+        <section id="display" class="section" hidden>
+          <header class="section-head">
             <h2>Display</h2>
             <p>Choose what appears in your Discord profile and how much detail is visible.</p>
-          </summary>
+          </header>
 
           <div class="card">
             <div class="field-grid">
@@ -205,7 +204,7 @@
                 <input id="app-id" class="input" type="text" inputmode="numeric" autocomplete="off" spellcheck="false" placeholder="e.g. 123456789012345678" aria-describedby="app-id-hint app-id-error">
                 <p id="app-id-hint" class="field-hint">
                   16–22 digits from the Discord Developer Portal.
-                  <a href="https://discord.com/developers/applications" target="_blank" rel="noreferrer">Open portal ↗</a>
+                  <a href="https://discord.com/developers/applications" target="_blank" rel="noreferrer">Open portal</a>
                 </p>
                 <p id="app-id-error" class="field-error" role="alert" hidden>The Application ID must contain 16–22 digits.</p>
               </div>
@@ -309,14 +308,13 @@
               </div>
             </details>
           </div>
-        </details>
+        </section>
 
-        <details id="behavior" class="section">
-          <summary class="section-head">
-            <p class="eyebrow">03</p>
+        <section id="behavior" class="section" hidden>
+          <header class="section-head">
             <h2>Behavior</h2>
             <p>When presence is visible – and when Chrome stays quiet.</p>
-          </summary>
+          </header>
 
           <div class="card">
             <div class="toggle-list">
@@ -356,14 +354,13 @@
               </div>
             </div>
           </div>
-        </details>
+        </section>
 
-        <details id="privacy" class="section">
-          <summary class="section-head">
-            <p class="eyebrow">04</p>
+        <section id="privacy" class="section" hidden>
+          <header class="section-head">
             <h2>Privacy</h2>
             <p>You decide which sites never appear in Discord.</p>
-          </summary>
+          </header>
 
           <div class="card">
             <div class="privacy-columns">
@@ -396,14 +393,13 @@
               </span>
             </div>
           </div>
-        </details>
+        </section>
 
-        <details id="about" class="section">
-          <summary class="section-head">
-            <p class="eyebrow">05</p>
+        <section id="about" class="section" hidden>
+          <header class="section-head">
             <h2>About</h2>
             <p>What happens under the hood – and where the limits are.</p>
-          </summary>
+          </header>
 
           <div class="card">
             <div class="about-grid">
@@ -445,19 +441,20 @@
               <span>Not affiliated with Google or Discord.</span>
             </div>
           </div>
-        </details>
+        </section>
+
+        <footer class="page-footer">
+          <p>
+            Chrome Presence is a local hobby project. Chrome and Discord are trademarks of their
+            respective owners. No data is sent to the developer.
+          </p>
+        </footer>
       </main>
     </div>
 
-    <footer class="page-footer">
-      <p>
-        Chrome Presence is a local hobby project. Chrome and Discord are trademarks of their
-        respective owners. No data is sent to the developer.
-      </p>
-    </footer>
-
     <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
+    <script type="module" src="../ui/select.js"></script>
     <script type="module" src="options.js"></script>
   </body>
 </html>
